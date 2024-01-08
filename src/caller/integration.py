@@ -71,7 +71,7 @@ class OpenAIIntegration():
         """Function to take the results and output to JSON file for analysis"""
         uniqueDateTimeStamp = results[unixDateTimeFieldName]
         modelName = results[modelFieldName]
-        makedirs(path.dirname('./' + folderName + '/data/results/'), exist_ok=True)
+        makedirs(path.dirname('./src/' + folderName + '/data/results/'), exist_ok=True)
         
         with open(f'./{folderName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
             dump(results, outputFile, ensure_ascii=False, indent=messageIndent)
@@ -102,7 +102,7 @@ class OpenAIIntegration():
         outputFileNames = []
 
         try:
-            pdf = pdfium.PdfDocument(f"./{applicationName}/data/{pdfFileName}")
+            pdf = pdfium.PdfDocument(f"./src/{applicationName}/data/{pdfFileName}")
         except pdfium.PdfiumError as e:
             print(f'Error! Not a valid PDF, please upload a different file. Full error message: {e}')
         else:
@@ -116,7 +116,7 @@ class OpenAIIntegration():
                     rotation = renderRotationDegrees, # 0, 90, 180, or 270 degrees (default is 0)
                 )
 
-                fileNameFormatted = f'./{fileNameWithoutExtension}_{pageNumber + 1}.png'
+                fileNameFormatted = f'./src/{applicationName}/data/{fileNameWithoutExtension}_{pageNumber + 1}.png'
                 
                 convertedImage = bitmap.to_pil()
                 convertedImage.save(fileNameFormatted)
