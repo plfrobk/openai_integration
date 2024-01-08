@@ -176,5 +176,28 @@ class OpenAIAPIIntegration():
         response = post(apiURL, headers=header, json=payload)
 
         return response.json()
+    
+    def set_up_assistant(self, name, instructions, assistantType='retrieval' , apiURL = 'https://api.openai.com/v1/assistants', gptModel='gpt-4-vision-preview'):
+        """Function to call the open AI API to create an assistant"""
+        header = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.apiKey}",
+            "OpenAI-Beta": "assistants=v1"
+            }
+        
+        payload = {
+            "model": gptModel,
+            "name": name,
+            "instructions": instructions,
+            "tools": [
+                {
+                "type": assistantType
+                }
+            ]
+        }
+
+        response = post(apiURL, headers=header, json=payload)
+
+        return response.json()
 
     modelInformation = {"latest_models": [{"name":"gpt-3.5-turbo-1106", "max_tokens_supported":4096, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4-1106-preview", "max_tokens_supported":128000, "cost_per_1k_tokens": 0.04}], "historical_models" : [{"name":"gpt-3.5-turbo", "max_tokens_supported":4000, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4", "max_tokens_supported":16000, "cost_per_1k_tokens": 0.009}, {"name":"gpt-4-32k", "max_tokens_supported":32000, "cost_per_1k_tokens": 0.18}]}
