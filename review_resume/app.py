@@ -1,4 +1,4 @@
-from openai_integration import OpenAIIntegration
+from caller.integration import OpenAIIntegration
 
 ###VARIABLES###
 fileName = "RKairis Resume_General PM_2023.pdf"
