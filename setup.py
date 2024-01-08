@@ -5,7 +5,7 @@ setup(
     name='OpenAI_Integration',
     version='1.0',
     license='GNU General Public License',
-    description='An example ',
+    description='',
     author='rjk',
     author_email='rjkairis@gmail.com',
     packages=find_packages('src'),
