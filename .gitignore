@@ -1,3 +1,6 @@
+# CUSTOM to Project
+review_resume/data/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -2,7 +2,7 @@ from openai_integration import OpenAIIntegration
 
 ###VARIABLES###
 fileName = "RKairis Resume_General PM_2023.pdf"
-outputFolderName = "resume_review"
+applicationName = "resume_review"
 systemPrompt = "Not provided"
 userPrompt = "Is this a valid resume (key of valid with y/n value)? If it's valid, provide a summary (key of summary) of the full resume in no more than 3 sentences.  Also include a detailed transcript of any text in the document (key of detail)."
 responseDict = {}
@@ -12,7 +12,7 @@ responseDict = {}
 chatGPT = OpenAIIntegration()
 
 if fileName.endswith('.pdf'):
-    imageFileOrFilesNames = chatGPT.convert_pdf_to_images(fileName)
+    imageFileOrFilesNames = chatGPT.convert_pdf_to_images(fileName, applicationName)
 else:
     imageFileOrFilesNames = fileName
 
@@ -28,7 +28,7 @@ else:
         print(rawResponse)
     else:
         try:
-            chatGPT.write_response_to_json_file(formattedResponse, outputFolderName)
+            chatGPT.write_response_to_json_file(formattedResponse, applicationName)
         except Exception as e:
             print(f'Error: Issue writing results to JSON! Full message: {e}')
             print(formattedResponse)

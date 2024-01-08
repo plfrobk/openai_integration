@@ -12,7 +12,7 @@ class OpenAIIntegration():
     def __init__(self):
         self.apiKey = self.get_api_key()    
 
-    def get_api_key(self, fileName='./MAIN_API_KEY.txt'):
+    def get_api_key(self, fileName='./local/API_KEY.txt'): #Put API key in virtual environment folder, e.g. local
         """Function to get the API key to use for authorization in API calls"""
         try:
             with open(fileName, 'r', encoding='utf-8') as data:
@@ -71,9 +71,9 @@ class OpenAIIntegration():
         """Function to take the results and output to JSON file for analysis"""
         uniqueDateTimeStamp = results[unixDateTimeFieldName]
         modelName = results[modelFieldName]
-        makedirs(path.dirname('./' + folderName + '/'), exist_ok=True)
+        makedirs(path.dirname('./' + folderName + '/data/results/'), exist_ok=True)
         
-        with open(f'./data/{folderName}/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./{folderName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
             dump(results, outputFile, ensure_ascii=False, indent=messageIndent)
     
     def get_num_tokens_from_string(self, inputToCheck, encodingName='cl100k_base'):
@@ -96,13 +96,13 @@ class OpenAIIntegration():
         
         return proceed
 
-    def convert_pdf_to_images(self, pdfFileName, dataFolderName, renderDPIScale=3, renderRotationDegrees=0):
+    def convert_pdf_to_images(self, pdfFileName, applicationName, renderDPIScale=3, renderRotationDegrees=0):
         fileNameExtensionCharacterPosition = pdfFileName.find('.')
         fileNameWithoutExtension = pdfFileName[:fileNameExtensionCharacterPosition]
         outputFileNames = []
 
         try:
-            pdf = pdfium.PdfDocument(f"./data/{dataFolderName}/{pdfFileName}")
+            pdf = pdfium.PdfDocument(f"./{applicationName}/data/{pdfFileName}")
         except pdfium.PdfiumError as e:
             print(f'Error! Not a valid PDF, please upload a different file. Full error message: {e}')
         else:
