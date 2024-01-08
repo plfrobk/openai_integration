@@ -7,7 +7,7 @@ from base64 import b64encode
 import pypdfium2 as pdfium
 
 
-class OpenAIIntegration():
+class OpenAIAPIIntegration():
     """Custom class to create client with API key, get a response, and format it to save to JSON"""
     def __init__(self):
         self.apiKey = self.get_api_key()    

@@ -1,4 +1,4 @@
-from caller.integration import OpenAIIntegration
+from caller.api_integration import OpenAIAPIIntegration
 
 ###VARIABLES###
 fileName = "RKairis_Resume_2023.pdf"
@@ -9,7 +9,7 @@ responseDict = {}
 
 ###MAIN###
 
-chatGPT = OpenAIIntegration()
+chatGPT = OpenAIAPIIntegration()
 
 if fileName.endswith('.pdf'):
     imageFileOrFilesNames = chatGPT.convert_pdf_to_images(pdfFileName=fileName, applicationName=applicationName)
