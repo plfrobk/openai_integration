@@ -18,14 +18,8 @@ if assistantId[0:5] != 'asst_':
     chatGPT.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
     assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
 
-print(assistantId)
-
 threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
 
 if threadId[0:7] != 'thread_':
     chatGPT.create_assistant_thread(assistantId=assistantId, applicationName=applicationName)
     threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
-
-print(threadId)
-#chatGPT.create_assistant(name='Resume Helper', instructions=assistantPrompt, applicationName=applicationName)
-#chatGPT.create_assistant_thread(applicationName=applicationName)
