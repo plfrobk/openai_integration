@@ -1,6 +1,6 @@
 from os import makedirs, path, listdir
 from datetime import datetime
-from json import dump
+from json import dump, load
 from tiktoken import get_encoding
 from requests import post
 from base64 import b64encode
@@ -71,9 +71,9 @@ class OpenAIAPIIntegration():
         """Function to take the results and output to JSON file for analysis"""
         uniqueDateTimeStamp = results[unixDateTimeFieldName]
         modelName = results[modelFieldName]
-        makedirs(path.dirname('./src/' + folderName + '/data/results/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{folderName}/data/results/'), exist_ok=True)
         
-        with open(f'./{folderName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{folderName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
             dump(results, outputFile, ensure_ascii=False, indent=messageIndent)
     
     def get_num_tokens_from_string(self, inputToCheck, encodingName='cl100k_base'):
@@ -177,7 +177,7 @@ class OpenAIAPIIntegration():
 
         return response.json()
     
-    def set_up_assistant(self, name, instructions, assistantType='retrieval' , apiURL = 'https://api.openai.com/v1/assistants', gptModel='gpt-4-vision-preview'):
+    def create_assistant(self, name, instructions, applicationName, assistantType='retrieval', apiURL = 'https://api.openai.com/v1/assistants', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
         """Function to call the open AI API to create an assistant"""
         header = {
             "Content-Type": "application/json",
@@ -197,7 +197,72 @@ class OpenAIAPIIntegration():
         }
 
         response = post(apiURL, headers=header, json=payload)
+        responseJSON = response.json()
 
-        return response.json()
+        assistantId = responseJSON['id']
+        assistantName = responseJSON['name']
+
+        makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+        
+        with open(f'./src/{applicationName}/data/assistant_config/{assistantId}_{assistantName}.json', mode, encoding='utf-8') as outputFile:
+            dump(responseJSON, outputFile, ensure_ascii=False, indent=messageIndent)
+
+    def get_assistant_id(self, applicationName, assistantName):
+        """Function to review the previously generated assistant json file configurations to return the ID associated"""
+        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        assistantFiles = []
+        output = 'Assistant does not exist by name entered.  Please try again or call the create assistant function.'
+
+        for file in configFiles:
+            if file.startswith('asst'):
+                assistantFiles.append(file)
+        
+        for file in assistantFiles:
+            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+                config = load(data)
+                name = config['name']
+            
+                if name == assistantName:
+                    output = config['id']
+            
+        return output
+    
+    def create_assistant_thread(self, assistantId, applicationName, apiURL = 'https://api.openai.com/v1/threads', mode='w', messageIndent=0):
+        """Function to call the open AI API to create a thread"""
+        header = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.apiKey}",
+            "OpenAI-Beta": "assistants=v1"
+            }
+        
+        payload = ''
+
+        response = post(apiURL, headers=header, json=payload)
+        responseJSON = response.json()
+
+        threadId = responseJSON['id']
+        createdDate = responseJSON['created_at']
+
+        makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+        
+        with open(f'./src/{applicationName}/data/assistant_config/{threadId}_{createdDate}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
+            dump(responseJSON, outputFile, ensure_ascii=False, indent=messageIndent)
+
+    def get_thread_id(self, assistantId, applicationName):
+        """Function to review the previously generated thread json file configurations to return the ID associated"""
+        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        threadFile = []
+        output = 'Thread does not exist for assistant.  Please try again or call the create thread function.'
+
+        for file in configFiles:
+            if file.startswith('thread') and file.endswith(f'{assistantId}.json'):
+                threadFile.append(file)
+    
+        with open(f'./src/{applicationName}/data/assistant_config/{threadFile[0]}', 'r') as data:
+            config = load(data)
+            output = config['id']
+            
+        return output
+
 
     modelInformation = {"latest_models": [{"name":"gpt-3.5-turbo-1106", "max_tokens_supported":4096, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4-1106-preview", "max_tokens_supported":128000, "cost_per_1k_tokens": 0.04}], "historical_models" : [{"name":"gpt-3.5-turbo", "max_tokens_supported":4000, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4", "max_tokens_supported":16000, "cost_per_1k_tokens": 0.009}, {"name":"gpt-4-32k", "max_tokens_supported":32000, "cost_per_1k_tokens": 0.18}]}
