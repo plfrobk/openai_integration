@@ -8,7 +8,7 @@ import pypdfium2 as pdfium
 from openai import OpenAI
 
 class OpenAIPythonIntegration(OpenAI):
-    """Custom class to create client with API key, get a response, and format it to save to JSON"""
+    """Custom class to utilize Python to directly work with OpenAI to do various functions"""
     def __init__(self):
         self.apiKey = self.get_api_key()
         self.organizationId = self.get_organization_key()
@@ -58,6 +58,8 @@ class OpenAIPythonIntegration(OpenAI):
         with open(f'./src/{applicationName}/data/assistant_config/{assistant.id}_{assistant.name}.json', mode, encoding='utf-8') as outputFile:
             dump(assistantDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
+        print('Created assistant with id: ' + str(assistant.id))
+
     def get_assistant_id(self, applicationName, assistantName):
         """Function to review the previously generated assistant json file configurations to return the ID associated"""
         configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
@@ -73,62 +75,107 @@ class OpenAIPythonIntegration(OpenAI):
                 name = config['name']
             
                 if name == assistantName:
-                    output = config['id']
+                    assistantId = config['id']
+                    print('Found existing assistant with id: ' + assistantId)
         
         try:
-            return output
+            return assistantId
         except UnboundLocalError:
             raise Exception('Error: Assistant does not exist by name entered.  Please check the application and assistant name or call the create assistant function.')
     
-    def upload_file_to_assistant(self, fileName, applicationName, filePurpose='assistants', fileReadMode = 'rb'):
+    def upload_file_to_assistant(self, fileName, applicationName, assistantId, filePurpose='assistants', fileReadMode = 'rb', fileWriteMode = 'w', messageIndent=0):
         """Function to directly upload a file to OpenAI"""
+        fileUploadDict = {}
 
         with open(f'./src/{applicationName}/data/{fileName}', mode=fileReadMode) as fileToUpload:
             try:
-                response = self.files.create(
+                uploadResponse = self.files.create(
                     file=fileToUpload,
                     purpose=filePurpose
                 )
             
-                print('Succcess! Response from OpenAI: ' + str(response))
+                print('Succcess! File uploaded.')
             except Exception as e:
-                print('Failure! Full error message: ' + str(e))
-            
-    def create_assistant_thread(self, assistantId, applicationName, apiURL = 'https://api.openai.com/v1/threads', mode='w', messageIndent=0):
-        """Function to call the open AI API to create a thread"""
-        header = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.apiKey}",
-            "OpenAI-Beta": "assistants=v1"
-            }
+                print('Failure! Could not upload file, full error message: ' + str(e))
+            else:
+                try:
+                    fileToAssistantResponse = self.beta.assistants.files.create(
+                        assistant_id = assistantId,
+                        file_id = uploadResponse.id
+                    )
+                
+                    print('Succcess! File id associated with assistant: ' + str(fileToAssistantResponse.id))
+
+                    fileUploadDict['id'] = fileToAssistantResponse.id
+                    fileUploadDict['assistant_id'] = fileToAssistantResponse.assistant_id
+                    fileUploadDict['created_at'] = fileToAssistantResponse.created_at
+                    fileUploadDict['original_file_name'] = fileName
+
+                    makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
         
-        payload = ''
+                    with open(f'./src/{applicationName}/data/assistant_config/{fileToAssistantResponse.id}_{fileName}_{fileToAssistantResponse.assistant_id}.json', fileWriteMode, encoding='utf-8') as outputFile:
+                        dump(fileUploadDict, outputFile, ensure_ascii=False, indent=messageIndent)
+                
+                except Exception as e:
+                    print('Failure! Could not associated uploaded file to assistant, full error message: ' + str(e))
+            
+    def check_for_existing_assistant_file_id(self, assistantId, fileName, applicationName):
+        """Function to review the previously generated file upload json configurations to return the ID associated"""
+        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        assistantFiles = []
 
-        response = post(apiURL, headers=header, json=payload)
-        responseJSON = response.json()
+        for file in configFiles:
+            if file.startswith('file') and file.endswith(f'{assistantId}.json'):
+                assistantFiles.append(file)
 
-        threadId = responseJSON['id']
-        createdDate = responseJSON['created_at']
+        for file in assistantFiles:
+            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+                config = load(data)
+                name = config['original_file_name']
+            
+                if name == fileName:
+                    fileId = config['id']
+                    print('Found file associated with id: ' + config['id'])
+    
+        return fileId
+    
+    def create_assistant_thread(self, assistantId, applicationName, userId, mode='w', messageIndent=0):
+        """Function to directly create a thread and associate with an assistant at OpenAI"""
+        threadDict = {}
+        threadResponse = self.beta.threads.create(
+            metadata={"assistantId": assistantId, "userId": userId}
+        )
+
+        threadDict['id'] = threadResponse.id
+        threadDict['created_at'] = threadResponse.created_at
+        threadDict['assistant_id'] = threadResponse.metadata['assistantId']
+        threadDict['user_id'] = int(threadResponse.metadata['userId'])
 
         makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/data/assistant_config/{threadId}_{createdDate}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
-            dump(responseJSON, outputFile, ensure_ascii=False, indent=messageIndent)
+        with open(f'./src/{applicationName}/data/assistant_config/{threadResponse.id}_{threadResponse.created_at}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
+            dump(threadDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
-    def get_thread_id(self, assistantId, applicationName):
+    def get_thread_id_for_user(self, assistantId, applicationName, userId):
         """Function to review the previously generated thread json file configurations to return the ID associated"""
         configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
-        threadFile = []
+        threadFiles = []
 
         for file in configFiles:
             if file.startswith('thread') and file.endswith(f'{assistantId}.json'):
-                threadFile.append(file)
+                threadFiles.append(file)
     
-        with open(f'./src/{applicationName}/data/assistant_config/{threadFile[0]}', 'r') as data:
-            config = load(data)
-            output = config['id']
+        for file in threadFiles:
+            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+                config = load(data)
+                threadId = config['id']
+                userId = config['user_id']
+
+            if userId == userId:
+                userSpecificFileId = threadId
+                print('Found existing thread for assistan and user with id: ' + str(userSpecificFileId))
             
         try:
-            return output
+            return userSpecificFileId
         except UnboundLocalError:
-            raise Exception('Error: Thread does not exist for assistant.  Please check the assistant ID or application name or call the create thread function.')
+            raise Exception('Error: Thread does not exist for assistant and user ID.  Please check the assistant ID, application name, and user ID or call the create thread function.')
