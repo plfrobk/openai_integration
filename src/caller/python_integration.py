@@ -33,35 +33,30 @@ class OpenAIPythonIntegration(OpenAI):
         except FileNotFoundError as e:
             print(f"Error: Organization key file not found! Full message: ${e}")
 
-    def create_assistant(self, name, instructions, applicationName, assistantType='retrieval', apiURL = 'https://api.openai.com/v1/assistants', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
-        """Function to call the open AI API to create an assistant"""
-        header = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.apiKey}",
-            "OpenAI-Beta": "assistants=v1"
-            }
-        
-        payload = {
-            "model": gptModel,
-            "name": name,
-            "instructions": instructions,
-            "tools": [
-                {
-                "type": assistantType
-                }
-            ]
-        }
+    def create_assistant(self, name, instructions, applicationName, metadata = '', assistantType='retrieval', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
+        """Function to directly use OpenAI to create an assistant"""
 
-        response = post(apiURL, headers=header, json=payload)
-        responseJSON = response.json()
+        assistantDict = {}
+        assistant = self.beta.assistants.create(
+            name=name,
+            instructions=instructions,
+            model=gptModel,
+            tools=[{"type": assistantType}],
+            metadata=metadata
+        ) 
 
-        assistantId = responseJSON['id']
-        assistantName = responseJSON['name']
+        assistantDict['id'] = assistant.id
+        assistantDict['name'] = assistant.name
+        assistantDict['created_at'] = assistant.created_at
+        assistantDict['model'] = assistant.model
+        assistantDict['instructions'] = assistant.instructions
+        assistantDict['type'] = assistant.tools[0].type
+        assistantDict['metadata'] = assistant.metadata
 
         makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/data/assistant_config/{assistantId}_{assistantName}.json', mode, encoding='utf-8') as outputFile:
-            dump(responseJSON, outputFile, ensure_ascii=False, indent=messageIndent)
+        with open(f'./src/{applicationName}/data/assistant_config/{assistant.id}_{assistant.name}.json', mode, encoding='utf-8') as outputFile:
+            dump(assistantDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
     def get_assistant_id(self, applicationName, assistantName):
         """Function to review the previously generated assistant json file configurations to return the ID associated"""

@@ -12,13 +12,11 @@ responseDict = {}
 
 client = OpenAIPythonIntegration()
 
-client.upload_file_to_assistant(fileName=fileNameOrNamesToUpload, applicationName=applicationName)
-
-# try:
-#     assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
-# except:
-#     chatGPT.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
-#     assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+try:
+    assistantId = client.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+except:
+    client.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
+    assistantId = client.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
 # else:
 #     try:
 #         threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
