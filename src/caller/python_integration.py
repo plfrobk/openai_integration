@@ -179,3 +179,24 @@ class OpenAIPythonIntegration(OpenAI):
             return userSpecificFileId
         except UnboundLocalError:
             raise Exception('Error: Thread does not exist for assistant and user ID.  Please check the assistant ID, application name, and user ID or call the create thread function.')
+        
+    def add_message_in_existing_thread(self, threadId, message, fileListToInclude):
+        try:
+            messageResponse = self.beta.threads.messages.create(
+                thread_id = threadId,
+                role = 'user',
+                content = message,
+                file_ids=fileListToInclude
+            )
+
+            print('Success! Message added to thread, full response: ' + str(messageResponse))
+        except Exception as e:
+            print('Failure! Message not added to thread, fill response: ' + str(e))
+
+    def run_thread_for_response(self, threadId, assistantId, applicationName):
+        runResponse = self.beta.threads.runs.create(
+            thread_id = threadId,
+            assistant_id = assistantId
+        )
+
+        #To Do: Add saving output to JSON file and then update assistant_app
