@@ -1,6 +1,6 @@
 from os import makedirs, path, listdir
 from datetime import datetime
-from json import dump, load
+from json import dump, dumps, load
 from tiktoken import get_encoding
 from requests import post
 from base64 import b64encode
@@ -211,7 +211,6 @@ class OpenAIAPIIntegration():
         """Function to review the previously generated assistant json file configurations to return the ID associated"""
         configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
         assistantFiles = []
-        output = 'Assistant does not exist by name entered.  Please try again or call the create assistant function.'
 
         for file in configFiles:
             if file.startswith('asst'):
@@ -224,8 +223,11 @@ class OpenAIAPIIntegration():
             
                 if name == assistantName:
                     output = config['id']
-            
-        return output
+        
+        try:
+            return output
+        except UnboundLocalError:
+            raise Exception('Error: Assistant does not exist by name entered.  Please check the application and assistant name or call the create assistant function.')
     
     def create_assistant_thread(self, assistantId, applicationName, apiURL = 'https://api.openai.com/v1/threads', mode='w', messageIndent=0):
         """Function to call the open AI API to create a thread"""
@@ -252,7 +254,6 @@ class OpenAIAPIIntegration():
         """Function to review the previously generated thread json file configurations to return the ID associated"""
         configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
         threadFile = []
-        output = 'Thread does not exist for assistant.  Please try again or call the create thread function.'
 
         for file in configFiles:
             if file.startswith('thread') and file.endswith(f'{assistantId}.json'):
@@ -262,7 +263,10 @@ class OpenAIAPIIntegration():
             config = load(data)
             output = config['id']
             
-        return output
+        try:
+            return output
+        except UnboundLocalError:
+            raise Exception('Error: Thread does not exist for assistant.  Please check the assistant ID or application name or call the create thread function.')
 
 
     modelInformation = {"latest_models": [{"name":"gpt-3.5-turbo-1106", "max_tokens_supported":4096, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4-1106-preview", "max_tokens_supported":128000, "cost_per_1k_tokens": 0.04}], "historical_models" : [{"name":"gpt-3.5-turbo", "max_tokens_supported":4000, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4", "max_tokens_supported":16000, "cost_per_1k_tokens": 0.009}, {"name":"gpt-4-32k", "max_tokens_supported":32000, "cost_per_1k_tokens": 0.18}]}

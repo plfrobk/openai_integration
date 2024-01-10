@@ -1,4 +1,4 @@
-from caller.api_integration import OpenAIAPIIntegration
+from caller.python_integration import OpenAIPythonIntegration
 
 ###VARIABLES###
 fileNameOrNamesToUpload = 'RKairis_Resume_2023.pdf'
@@ -10,16 +10,21 @@ responseDict = {}
 
 ###MAIN###
 
-chatGPT = OpenAIAPIIntegration()
+client = OpenAIPythonIntegration()
 
-assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+client.upload_file_to_assistant(fileName=fileNameOrNamesToUpload, applicationName=applicationName)
 
-if assistantId[0:5] != 'asst_':
-    chatGPT.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
-    assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+# try:
+#     assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+# except:
+#     chatGPT.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
+#     assistantId = chatGPT.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+# else:
+#     try:
+#         threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
+#     except:
+#         chatGPT.create_assistant_thread(assistantId=assistantId, applicationName=applicationName)
+#         threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
 
-threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
-
-if threadId[0:7] != 'thread_':
-    chatGPT.create_assistant_thread(assistantId=assistantId, applicationName=applicationName)
-    threadId = chatGPT.get_thread_id(assistantId=assistantId, applicationName=applicationName)
+# print(assistantId)
+# print(threadId)
