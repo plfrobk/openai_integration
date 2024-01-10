@@ -53,16 +53,16 @@ class OpenAIPythonIntegration(OpenAI):
         assistantDict['type'] = assistant.tools[0].type
         assistantDict['metadata'] = assistant.metadata
 
-        makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{applicationName}/config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/data/assistant_config/{assistant.id}_{assistant.name}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{applicationName}/config/{assistant.id}_{assistant.name}.json', mode, encoding='utf-8') as outputFile:
             dump(assistantDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
         print('Created assistant with id: ' + str(assistant.id))
 
     def get_assistant_id(self, applicationName, assistantName):
         """Function to review the previously generated assistant json file configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        configFiles = listdir(f'./src/{applicationName}/config/')
         assistantFiles = []
 
         for file in configFiles:
@@ -70,7 +70,7 @@ class OpenAIPythonIntegration(OpenAI):
                 assistantFiles.append(file)
         
         for file in assistantFiles:
-            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+            with open(f'./src/{applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 name = config['name']
             
@@ -111,9 +111,9 @@ class OpenAIPythonIntegration(OpenAI):
                     fileUploadDict['created_at'] = fileToAssistantResponse.created_at
                     fileUploadDict['original_file_name'] = fileName
 
-                    makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+                    makedirs(path.dirname(f'./src/{applicationName}/config/'), exist_ok=True)
         
-                    with open(f'./src/{applicationName}/data/assistant_config/{fileToAssistantResponse.id}_{fileName}_{fileToAssistantResponse.assistant_id}.json', fileWriteMode, encoding='utf-8') as outputFile:
+                    with open(f'./src/{applicationName}/config/{fileToAssistantResponse.id}_{fileName}_{fileToAssistantResponse.assistant_id}.json', fileWriteMode, encoding='utf-8') as outputFile:
                         dump(fileUploadDict, outputFile, ensure_ascii=False, indent=messageIndent)
                 
                 except Exception as e:
@@ -121,7 +121,7 @@ class OpenAIPythonIntegration(OpenAI):
             
     def check_for_existing_assistant_file_id(self, assistantId, fileName, applicationName):
         """Function to review the previously generated file upload json configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        configFiles = listdir(f'./src/{applicationName}/config/')
         assistantFiles = []
 
         for file in configFiles:
@@ -129,7 +129,7 @@ class OpenAIPythonIntegration(OpenAI):
                 assistantFiles.append(file)
 
         for file in assistantFiles:
-            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+            with open(f'./src/{applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 name = config['original_file_name']
             
@@ -151,14 +151,14 @@ class OpenAIPythonIntegration(OpenAI):
         threadDict['assistant_id'] = threadResponse.metadata['assistantId']
         threadDict['user_id'] = int(threadResponse.metadata['userId'])
 
-        makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{applicationName}/config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/data/assistant_config/{threadResponse.id}_{threadResponse.created_at}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{applicationName}/config/{threadResponse.id}_{threadResponse.created_at}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
             dump(threadDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
     def get_thread_id_for_user(self, assistantId, applicationName, userId):
         """Function to review the previously generated thread json file configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        configFiles = listdir(f'./src/{applicationName}/config/')
         threadFiles = []
 
         for file in configFiles:
@@ -166,7 +166,7 @@ class OpenAIPythonIntegration(OpenAI):
                 threadFiles.append(file)
     
         for file in threadFiles:
-            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+            with open(f'./src/{applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 threadId = config['id']
                 userId = config['user_id']
@@ -193,10 +193,52 @@ class OpenAIPythonIntegration(OpenAI):
         except Exception as e:
             print('Failure! Message not added to thread, fill response: ' + str(e))
 
-    def run_thread_for_response(self, threadId, assistantId, applicationName):
-        runResponse = self.beta.threads.runs.create(
-            thread_id = threadId,
-            assistant_id = assistantId
-        )
+    def run_thread_for_assistant_response(self, threadId, assistantId, applicationName, userId, mode='w', messageIndent=0):
+        try:
+            createRunResponse = self.beta.threads.runs.create(
+                thread_id = threadId,
+                assistant_id = assistantId
+            )
+        except Exception as e:
+            print('Failure! Could not run thread, full response: ' + str(e))
+        else:
+            try:
+                runResponseDict = {}
 
-        #To Do: Add saving output to JSON file and then update assistant_app
+                runResponse = self.beta.threads.runs.retrieve(
+                thread_id = threadId,
+                run_id = createRunResponse.id
+                )
+
+                runResponseDict['id'] = runResponse.id
+                runResponseDict['assistant_id'] = runResponse.assistant_id
+                runResponseDict['thread_id'] = runResponse.thread_id
+                runResponseDict['user_id'] = userId
+                runResponseDict['status'] = runResponse.status
+                runResponseDict['created_at'] = runResponse.created_at
+                runResponseDict['started_at'] = runResponse.started_at
+                runResponseDict['completed_at'] = runResponse.completed_at
+                runResponseDict['expires_at'] = runResponse.expires_at
+                runResponseDict['failed_at'] = runResponse.failed_at
+                runResponseDict['error_message'] = runResponse.last_error
+
+                makedirs(path.dirname(f'./src/{applicationName}/data/run_logs/'), exist_ok=True)
+        
+                with open(f'./src/{applicationName}/data/run_logs/{runResponse.id}_{runResponse.created_at}_{runResponse.thread_id}.json', mode, encoding='utf-8') as outputFile:
+                    dump(runResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
+            
+            except Exception as e:
+                print('Failure! Could not retrieve run thread, full response: ' + str(e))
+    
+    #add new function or update one above to retrieve updated run status:
+        # run = self.beta.threads.runs.retrieve(
+        #     thread_id="thread_abc123",
+        #     run_id="run_abc123"
+        # )
+
+    def retrieve_messages_in_existing_thread(self, threadId):
+        try:
+            threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
+            print('Success! Retrieved message list, full response: ' + str(threadMessageResponse))
+        except Exception as e:
+            print('Failure! Could not retrieve thread messages, full response: ' + str(e))
