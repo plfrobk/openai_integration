@@ -173,21 +173,37 @@ class OpenAIPythonIntegration(OpenAI):
 
             if userId == userId:
                 userSpecificFileId = threadId
-                print('Found existing thread for assistan and user with id: ' + str(userSpecificFileId))
+                print('Found existing thread for assistant and user with id: ' + str(userSpecificFileId))
             
         try:
             return userSpecificFileId
         except UnboundLocalError:
             raise Exception('Error: Thread does not exist for assistant and user ID.  Please check the assistant ID, application name, and user ID or call the create thread function.')
         
-    def add_message_in_existing_thread(self, threadId, message, fileListToInclude):
+    def add_message_in_existing_thread(self, threadId, message, fileListToInclude, applicationName, userId, mode='w', messageIndent=0):
         try:
+            messageResponseDict = {}
+
             messageResponse = self.beta.threads.messages.create(
                 thread_id = threadId,
                 role = 'user',
                 content = message,
                 file_ids=fileListToInclude
             )
+
+            messageResponseDict['id'] = messageResponse.id
+            messageResponseDict['created_at'] = messageResponse.created_at
+            messageResponseDict['thread_id'] = messageResponse.thread_id
+            messageResponseDict['run_id'] = messageResponse.run_id
+            messageResponseDict['user_id'] = userId
+            messageResponseDict['user'] = messageResponse.role
+            messageResponseDict['response_type'] = messageResponse.content[0].type
+            messageResponseDict['response_text'] = messageResponse.content[0].text.value
+
+            makedirs(path.dirname(f'./src/{applicationName}/data/chat_messages/'), exist_ok=True)
+
+            with open(f'./src/{applicationName}/data/chat_messages/{userId}_{messageResponse.role}_{messageResponse.id}_{messageResponse.created_at}_{messageResponse.run_id}.json', mode, encoding='utf-8') as outputFile:
+                dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
             print('Success! Message added to thread, full response: ' + str(messageResponse))
         except Exception as e:
@@ -236,9 +252,56 @@ class OpenAIPythonIntegration(OpenAI):
         #     run_id="run_abc123"
         # )
 
-    def retrieve_messages_in_existing_thread(self, threadId):
+    def get_latest_assistant_message_in_existing_thread(self, threadId, applicationName, userId, assistantRoleName = 'assistant', mode='w', messageIndent=0):
         try:
             threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
-            print('Success! Retrieved message list, full response: ' + str(threadMessageResponse))
+            latestMessage = threadMessageResponse.data[0]
+
+            if latestMessage.role == assistantRoleName:
+                for response in latestMessage.content:
+                    messageResponseDict = {}
+                    
+                    messageResponseDict['id'] = latestMessage.id
+                    messageResponseDict['created_at'] = latestMessage.created_at
+                    messageResponseDict['thread_id'] = latestMessage.thread_id
+                    messageResponseDict['run_id'] = latestMessage.run_id
+                    messageResponseDict['user_id'] = userId
+                    messageResponseDict['user'] = latestMessage.role
+                    messageResponseDict['response_type'] = response.type
+                    messageResponseDict['response_text'] = response.text.value
+
+                    makedirs(path.dirname(f'./src/{applicationName}/data/chat_messages/'), exist_ok=True)
+        
+                    with open(f'./src/{applicationName}/data/chat_messages/{userId}_{latestMessage.role}_{latestMessage.id}_{latestMessage.created_at}_{latestMessage.run_id}.json', mode, encoding='utf-8') as outputFile:
+                        dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
+            else:
+                print('Failure! Latest message is not an assistant response.  Please run the function to run the assistant thread and try again.')
+        except Exception as e:
+            print('Failure! Could not retrieve thread messages, full response: ' + str(e))
+
+    def get_all_messages_in_existing_thread(self, threadId, applicationName, userId, mode='w', messageIndent=0):
+        try:
+            threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
+            latestMessage = threadMessageResponse.data
+
+            for message in latestMessage:
+                for response in message.content:
+                    messageResponseDict = {}
+
+                    messageResponseDict['id'] = message.id
+                    messageResponseDict['created_at'] = message.created_at
+                    messageResponseDict['thread_id'] = message.thread_id
+                    messageResponseDict['run_id'] = message.run_id
+                    messageResponseDict['user_id'] = userId
+                    messageResponseDict['user'] = message.role
+                    messageResponseDict['response_type'] = response.type
+                    messageResponseDict['response_text'] = response.text.value
+
+                    makedirs(path.dirname(f'./src/{applicationName}/data/chat_messages/'), exist_ok=True)
+        
+                    with open(f'./src/{applicationName}/data/chat_messages/{userId}_{message.role}_{message.id}_{message.created_at}_{message.run_id}.json', mode, encoding='utf-8') as outputFile:
+                        dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
+            
+            print('Success! All thread messages retrieved and saved')
         except Exception as e:
             print('Failure! Could not retrieve thread messages, full response: ' + str(e))

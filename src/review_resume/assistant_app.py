@@ -35,6 +35,6 @@ else:
         client.create_assistant_thread(assistantId=assistantId, applicationName=applicationName, userId=userId)
         userThreadId = client.get_thread_id_for_user(assistantId=assistantId, applicationName=applicationName, userId=userId)
     else:
-        #client.add_message_in_existing_thread(threadId=userThreadId, message=userPrompt, fileListToInclude=fileListIds)
-        # client.run_thread_for_assistant_response(threadId=userThreadId, assistantId=assistantId, applicationName=applicationName, userId=userId)
-        client.retrieve_messages_in_existing_thread(threadId=userThreadId)
+        client.add_message_in_existing_thread(threadId=userThreadId, message=userPrompt, fileListToInclude=fileListIds)
+        client.run_thread_for_assistant_response(threadId=userThreadId, assistantId=assistantId, applicationName=applicationName, userId=userId)
+        client.get_latest_assistant_message_in_existing_thread(threadId=userThreadId)
