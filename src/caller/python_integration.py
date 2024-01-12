@@ -193,7 +193,7 @@ class OpenAIPythonIntegration(OpenAI):
         except UnboundLocalError:
             raise Exception('Error: Thread does not exist for assistant and user ID.  Please check the assistant ID, application name, and user ID or call the create thread function.')
         
-    def add_message_in_existing_thread(self, threadId, message, fileListToInclude, userId, mode='w', messageIndent=0):
+    def add_message_in_existing_thread(self, threadId, message, fileListToInclude, userId, metadata={}, mode='w', messageIndent=0):
         try:
             messageResponseDict = {}
 
@@ -201,7 +201,8 @@ class OpenAIPythonIntegration(OpenAI):
                 thread_id = threadId,
                 role = 'user',
                 content = message,
-                file_ids=fileListToInclude
+                file_ids=fileListToInclude,
+                metadata=metadata
             )
 
             messageResponseDict['id'] = messageResponse.id
@@ -222,11 +223,12 @@ class OpenAIPythonIntegration(OpenAI):
         except Exception as e:
             print('Failure! Message not added to thread, full response: ' + str(e))
 
-    def run_thread_for_assistant_response(self, threadId, assistantId, userId, mode='w', messageIndent=0, runProcessingStatus='in_progress', maxRetries=5, retryWaitTimeSeconds=3):
+    def run_thread_for_assistant_response(self, threadId, assistantId, userId, metadata={}, mode='w', messageIndent=0, runProcessingStatus='in_progress', maxRetries=5, retryWaitTimeSeconds=3):
         try:
             createRunResponse = self.beta.threads.runs.create(
                 thread_id = threadId,
-                assistant_id = assistantId
+                assistant_id = assistantId,
+                metadata=metadata
             )
         except Exception as e:
             print('Failure! Could not run thread, full response: ' + str(e))

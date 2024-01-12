@@ -1,5 +1,7 @@
 # openai_integration
-Application to integrate with OpenAI's functionality, both via API and Python, that will call and save results to local JSON files to use as a starter to develop applications.  Please do the following to get going with the existing functionality:
+Application to integrate with OpenAI's functionality, both via API and Python directly, that will call and save results to local JSON files.  The intent is to produce flattened data that could potentially be used in a relational database to develop applications (if desired).  For the python integration specifically, it allows you to pass in a user ID that could be a PK from your database and can be easily added to the api integration files, if needed.
+
+The goal of saving local data to cut down on cost and time for additional API calls in order to pull down previously sent information, where applicable. Recommend the following steps to get started:
 
 1.) Create a virtual environment
 

@@ -14,6 +14,7 @@ class OpenAIAPIIntegration():
         self.virtualEnvironmentName = virtualEnvironmentName
 
         self.apiKey = self.get_api_key()
+        self.organizationId = self.get_organization_key()
 
     def get_api_key(self): #Put API key in virtual environment folder, e.g. local
         """Function to get the API key to use for authorization in API calls"""
@@ -26,11 +27,23 @@ class OpenAIAPIIntegration():
         except FileNotFoundError as e:
             print(f"Error: API key file not found! Full message: ${e}")
 
+    def get_organization_key(self):
+        """Function to get the Organization key to use with the API key when opening client object"""
+        try:
+            fileName = f'./{self.virtualEnvironmentName}/ORGANIZATION_KEY.txt'
+            
+            with open(fileName, 'r', encoding='utf-8') as data:
+                key = data.read().strip()
+            return key
+        except FileNotFoundError as e:
+            print(f"Error: Organization key file not found! Full message: ${e}")
+    
     def get_chat_response(self, systemPrompt, userPrompt, gptModel, gptTemperature = 1, apiURL = 'https://api.openai.com/v1/chat/completions'):
         """Function to call the OpenAI chat API and return a response in JSON format"""
         header = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {self.apiKey}"
+        "Authorization": f"Bearer {self.apiKey}",
+        "OpenAI-Organization": self.organizationId
         }
 
         payload = {
@@ -77,9 +90,9 @@ class OpenAIAPIIntegration():
         """Function to take the results and output to JSON file for analysis"""
         uniqueDateTimeStamp = results[unixDateTimeFieldName]
         modelName = results[modelFieldName]
-        makedirs(path.dirname(f'./src/{self.applicationName}/data/results/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{self.applicationName}/data/chat_messages/'), exist_ok=True)
         
-        with open(f'./src/{self.applicationName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{self.applicationName}/data/chat_messages/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
             dump(results, outputFile, ensure_ascii=False, indent=messageIndent)
     
     def get_num_tokens_from_string(self, inputToCheck, encodingName='cl100k_base'):
@@ -141,7 +154,8 @@ class OpenAIAPIIntegration():
         
         header = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {self.apiKey}"
+        "Authorization": f"Bearer {self.apiKey}",
+        "OpenAI-Organization": self.organizationId
         }
 
         imageFileNamesToEncode = []
@@ -180,6 +194,7 @@ class OpenAIAPIIntegration():
         header = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.apiKey}",
+            "OpenAI-Organization": self.organizationId,
             "OpenAI-Beta": "assistants=v1"
             }
         
@@ -233,9 +248,10 @@ class OpenAIAPIIntegration():
         header = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.apiKey}",
+            "OpenAI-Organization": self.organizationId,
             "OpenAI-Beta": "assistants=v1"
             }
-        
+
         payload = ''
 
         response = post(apiURL, headers=header, json=payload)
