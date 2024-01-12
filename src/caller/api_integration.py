@@ -10,9 +10,10 @@ import pypdfium2 as pdfium
 class OpenAIAPIIntegration():
     """Custom class to utilize APIs (REST) to work with OpenAI to do various functions"""
     def __init__(self, applicationName, virtualEnvironmentName):
-        self.apiKey = self.get_api_key()
         self.applicationName = applicationName
         self.virtualEnvironmentName = virtualEnvironmentName
+
+        self.apiKey = self.get_api_key()
 
     def get_api_key(self): #Put API key in virtual environment folder, e.g. local
         """Function to get the API key to use for authorization in API calls"""

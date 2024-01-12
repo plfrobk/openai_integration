@@ -222,7 +222,7 @@ class OpenAIPythonIntegration(OpenAI):
         except Exception as e:
             print('Failure! Message not added to thread, full response: ' + str(e))
 
-    def run_thread_for_assistant_response(self, threadId, assistantId, userId, mode='w', messageIndent=0, runProcessingStatus='in_progress', maxRetries=5, retryWaitTimeSeconds=2):
+    def run_thread_for_assistant_response(self, threadId, assistantId, userId, mode='w', messageIndent=0, runProcessingStatus='in_progress', maxRetries=5, retryWaitTimeSeconds=3):
         try:
             createRunResponse = self.beta.threads.runs.create(
                 thread_id = threadId,
