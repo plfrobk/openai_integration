@@ -1,11 +1,11 @@
 # openai_integration
-Application to integrate with OpenAI's functionality, both via API and Python, that will call and save results to local JSON files to use as a starter to develop applications.  Recommend the following to get started:
+Application to integrate with OpenAI's functionality, both via API and Python, that will call and save results to local JSON files to use as a starter to develop applications.  Please do the following to get going with the existing functionality:
 
 1.) Create a virtual environment
 
 2.) Utilize the requirements.txt to install all necessary dependencies
 
-3.) Create a "API_KEY.txt" and "ORGANIZATION_KEY.txt" file in your virtual environment folder with your API and Organization code from OpenAI (Note: This file and all other contents in the virtual environment folder are excluded from GitHub for security reasons)
+3.) Create a "API_KEY.txt" and "ORGANIZATION_KEY.txt" file in your virtual environment folder with your API and Organization code  values from OpenAI (Note: This file and all other contents in the virtual environment folder are excluded from GitHub for security reasons).  If you want to provide these a different way, you'll need to tweak the functions in the integration files in the "src/caller/" location.
 
 4.) Run "pip install -e ." in your root folder to ensure the main caller package is avaiable to the other applications
 
