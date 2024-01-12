@@ -9,4 +9,8 @@ Application to integrate with OpenAI's functionality, both via API and Python, t
 
 4.) Run "pip install -e ." in your root folder to ensure the main caller package is avaiable to the other applications
 
-After this, the main application are all contained in the "src" folder.  The "caller" application is the main class that any other application or use cases will run off.  Calling the main custom class requires you to pass along an "application name" that will then automatically create additional folders and files in the "src" folder as you run it.
+After this, the main applications are all contained in the "src" folder.  The "caller" application is the main class that any other application or use cases will run off.  Calling the main custom class requires you to pass along an "application name" that will then automatically create additional folders and files in the "src" folder as you run it.
+
+There are two starter applications to use as a reference to get going.  The first is a sample chat app which asks for financial advice and then saves the responses back for later review.  This is a single thread/chat, so you cannot ask follow-up questions unless you pass through the previous response in the new question.
+
+The second is a sample assistant app which is a sports guru to help answer trivia.  This will create a persitent assistant and thread to allow you to add more messages and get responses that build off each other.  You can also upload files under a "data" folder in your application to then upload to OpenAI, associate with the assistant, and then utilize those file Ids in any messages sent to the assistant.
