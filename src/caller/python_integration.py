@@ -64,7 +64,7 @@ class OpenAIPythonIntegration(OpenAI):
         except Exception as e:
             print('Failure! Assistant failed to create, full response: ' + str(e))
 
-        print('Created assistant with id: ' + str(assistant.id))
+        print('Created assistant with id: ' + str(assistantResponse.id))
 
     def get_assistant_id_from_config(self, assistantName):
         """Function to review the previously generated assistant json file configurations to return the ID associated"""

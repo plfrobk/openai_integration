@@ -1,6 +1,6 @@
 from os import makedirs, path, listdir
 from datetime import datetime
-from json import dump, dumps, load
+from json import dump, load
 from tiktoken import get_encoding
 from requests import post
 from base64 import b64encode
@@ -9,12 +9,16 @@ import pypdfium2 as pdfium
 
 class OpenAIAPIIntegration():
     """Custom class to utilize APIs (REST) to work with OpenAI to do various functions"""
-    def __init__(self):
+    def __init__(self, applicationName, virtualEnvironmentName):
         self.apiKey = self.get_api_key()
+        self.applicationName = applicationName
+        self.virtualEnvironmentName = virtualEnvironmentName
 
-    def get_api_key(self, fileName='./local/API_KEY.txt'): #Put API key in virtual environment folder, e.g. local
+    def get_api_key(self): #Put API key in virtual environment folder, e.g. local
         """Function to get the API key to use for authorization in API calls"""
         try:
+            fileName = f'./{self.virtualEnvironmentName}/API_KEY.txt'
+            
             with open(fileName, 'r', encoding='utf-8') as data:
                 key = data.read().strip()
             return key
@@ -42,7 +46,7 @@ class OpenAIAPIIntegration():
 
         return response.json()
 
-    def format_response(self, gptResponse, systemPrompt, userPrompt, outputDict):
+    def format_chat_response(self, gptResponse, systemPrompt, userPrompt, outputDict):
         """Function to take results from OpenAI and format them with appropriate data points"""
         systemAnswerRaw = gptResponse['choices'][0]['message']['content']
         systemAnswerFormatted = systemAnswerRaw.replace('\n', '').replace('{  ','{')
@@ -67,13 +71,13 @@ class OpenAIAPIIntegration():
 
         return outputDict
     
-    def write_response_to_json_file(self, results, folderName, unixDateTimeFieldName = 'date_time_unix', modelFieldName = 'model', mode='w', messageIndent=0):
+    def write_formatted_chat_response_to_json_file(self, results, unixDateTimeFieldName = 'date_time_unix', modelFieldName = 'model', mode='w', messageIndent=0):
         """Function to take the results and output to JSON file for analysis"""
         uniqueDateTimeStamp = results[unixDateTimeFieldName]
         modelName = results[modelFieldName]
-        makedirs(path.dirname(f'./src/{folderName}/data/results/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{self.applicationName}/data/results/'), exist_ok=True)
         
-        with open(f'./src/{folderName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{self.applicationName}/data/results/{modelName}_{uniqueDateTimeStamp}.json', mode, encoding='utf-8') as outputFile:
             dump(results, outputFile, ensure_ascii=False, indent=messageIndent)
     
     def get_num_tokens_from_string(self, inputToCheck, encodingName='cl100k_base'):
@@ -96,13 +100,13 @@ class OpenAIAPIIntegration():
         
         return proceed
 
-    def convert_pdf_to_images(self, pdfFileName, applicationName, renderDPIScale=3, renderRotationDegrees=0):
+    def convert_pdf_to_images(self, pdfFileName, renderDPIScale=3, renderRotationDegrees=0):
         fileNameExtensionCharacterPosition = pdfFileName.find('.')
         fileNameWithoutExtension = pdfFileName[:fileNameExtensionCharacterPosition]
         outputFileNames = []
 
         try:
-            pdf = pdfium.PdfDocument(f"./src/{applicationName}/data/{pdfFileName}")
+            pdf = pdfium.PdfDocument(f"./src/{self.applicationName}/data/{pdfFileName}")
         except pdfium.PdfiumError as e:
             print(f'Error! Not a valid PDF, please upload a different file. Full error message: {e}')
         else:
@@ -116,7 +120,7 @@ class OpenAIAPIIntegration():
                     rotation = renderRotationDegrees, # 0, 90, 180, or 270 degrees (default is 0)
                 )
 
-                fileNameFormatted = f'./src/{applicationName}/data/{fileNameWithoutExtension}_{pageNumber + 1}.png'
+                fileNameFormatted = f'./src/{self.applicationName}/data/{fileNameWithoutExtension}_{pageNumber + 1}.png'
                 
                 convertedImage = bitmap.to_pil()
                 convertedImage.save(fileNameFormatted)
@@ -125,15 +129,7 @@ class OpenAIAPIIntegration():
         
         return outputFileNames
     
-    def get_list_of_image_file_names(self, originalFileNameWithoutExtension):
-            pictureExtensions = ('.png', '.jpg', '.jpeg', '.tif')
-
-            convertedFileNames = [fn for fn in listdir('./')
-                if fn.endswith(pictureExtensions) and fn.startswith(originalFileNameWithoutExtension)]
-            
-            return convertedFileNames
-    
-    def encode_image(self, imagePath):
+    def encode_image_to_b64(self, imagePath):
         """Function to encode a local image to base64 to prep for sending to OpenAI"""
         with open(imagePath, "rb") as imageFile:
             return b64encode(imageFile.read()).decode('utf-8')
@@ -177,7 +173,7 @@ class OpenAIAPIIntegration():
 
         return response.json()
     
-    def create_assistant(self, name, instructions, applicationName, assistantType='retrieval', apiURL = 'https://api.openai.com/v1/assistants', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
+    def create_assistant(self, name, instructions, assistantType='retrieval', apiURL = 'https://api.openai.com/v1/assistants', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
         """Function to call the open AI API to create an assistant"""
         header = {
             "Content-Type": "application/json",
@@ -202,14 +198,14 @@ class OpenAIAPIIntegration():
         assistantId = responseJSON['id']
         assistantName = responseJSON['name']
 
-        makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{self.applicationName}/data/config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/data/assistant_config/{assistantId}_{assistantName}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{self.applicationName}/data/config/{assistantId}_{assistantName}.json', mode, encoding='utf-8') as outputFile:
             dump(responseJSON, outputFile, ensure_ascii=False, indent=messageIndent)
 
-    def get_assistant_id(self, applicationName, assistantName):
+    def get_assistant_id_from_config(self, assistantName):
         """Function to review the previously generated assistant json file configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
+        configFiles = listdir(f'./src/{self.applicationName}/config/')
         assistantFiles = []
 
         for file in configFiles:
@@ -217,19 +213,20 @@ class OpenAIAPIIntegration():
                 assistantFiles.append(file)
         
         for file in assistantFiles:
-            with open(f'./src/{applicationName}/data/assistant_config/{file}', 'r') as data:
+            with open(f'./src/{self.applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 name = config['name']
             
                 if name == assistantName:
-                    output = config['id']
+                    assistantId = config['id']
+                    print('Found existing assistant with id: ' + assistantId)
         
         try:
-            return output
+            return assistantId
         except UnboundLocalError:
             raise Exception('Error: Assistant does not exist by name entered.  Please check the application and assistant name or call the create assistant function.')
     
-    def create_assistant_thread(self, assistantId, applicationName, apiURL = 'https://api.openai.com/v1/threads', mode='w', messageIndent=0):
+    def create_assistant_thread(self, assistantId, apiURL = 'https://api.openai.com/v1/threads', mode='w', messageIndent=0):
         """Function to call the open AI API to create a thread"""
         header = {
             "Content-Type": "application/json",
@@ -245,28 +242,34 @@ class OpenAIAPIIntegration():
         threadId = responseJSON['id']
         createdDate = responseJSON['created_at']
 
-        makedirs(path.dirname(f'./src/{applicationName}/data/assistant_config/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{self.applicationName}/data/config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/data/assistant_config/{threadId}_{createdDate}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{self.applicationName}/data/config/{threadId}_{createdDate}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
             dump(responseJSON, outputFile, ensure_ascii=False, indent=messageIndent)
 
-    def get_thread_id(self, assistantId, applicationName):
+    def get_thread_id_for_user(self, assistantId, userId):
         """Function to review the previously generated thread json file configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/data/assistant_config/')
-        threadFile = []
+        configFiles = listdir(f'./src/{self.applicationName}/config/')
+        threadFiles = []
 
         for file in configFiles:
             if file.startswith('thread') and file.endswith(f'{assistantId}.json'):
-                threadFile.append(file)
+                threadFiles.append(file)
     
-        with open(f'./src/{applicationName}/data/assistant_config/{threadFile[0]}', 'r') as data:
-            config = load(data)
-            output = config['id']
+        for file in threadFiles:
+            with open(f'./src/{self.applicationName}/config/{file}', 'r') as data:
+                config = load(data)
+                threadId = config['id']
+                userId = config['user_id']
+
+            if userId == userId:
+                userSpecificFileId = threadId
+                print('Found existing thread for assistant and user with id: ' + str(userSpecificFileId))
             
         try:
-            return output
+            return userSpecificFileId
         except UnboundLocalError:
-            raise Exception('Error: Thread does not exist for assistant.  Please check the assistant ID or application name or call the create thread function.')
+            raise Exception('Error: Thread does not exist for assistant and user ID.  Please check the assistant ID, application name, and user ID or call the create thread function.')
 
 
     modelInformation = {"latest_models": [{"name":"gpt-3.5-turbo-1106", "max_tokens_supported":4096, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4-1106-preview", "max_tokens_supported":128000, "cost_per_1k_tokens": 0.04}], "historical_models" : [{"name":"gpt-3.5-turbo", "max_tokens_supported":4000, "cost_per_1k_tokens": 0.0030}, {"name":"gpt-4", "max_tokens_supported":16000, "cost_per_1k_tokens": 0.009}, {"name":"gpt-4-32k", "max_tokens_supported":32000, "cost_per_1k_tokens": 0.18}]}
