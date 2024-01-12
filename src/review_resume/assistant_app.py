@@ -11,30 +11,30 @@ responseDict = {}
 
 ###MAIN###
 
-client = OpenAIPythonIntegration()
+client = OpenAIPythonIntegration(applicationName=applicationName, virtualEnvironmentName='local')
 
-try:
-    assistantId = client.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
-except:
-    client.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
-    assistantId = client.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
-else:
-    fileListIds = []
-    for file in fileNameOrNamesToUpload:
-        try:
-            fileId = client.check_for_existing_assistant_file_id(assistantId=assistantId, fileName=file, applicationName=applicationName)
-            fileListIds.append(fileId)
-        except:
-            client.upload_file_to_assistant(fileName=file, applicationName=applicationName, assistantId=assistantId)
-            fileId = client.check_for_existing_assistant_file_id(assistantId=assistantId, fileName=file, applicationName=applicationName)
-            fileListIds.append(fileId)
+# try:
+#     assistantId = client.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+# except:
+#     client.create_assistant(name=assistantName, instructions=assistantPrompt, applicationName=applicationName)
+#     assistantId = client.get_assistant_id(applicationName=applicationName, assistantName=assistantName)
+# else:
+#     fileListIds = []
+#     for file in fileNameOrNamesToUpload:
+#         try:
+#             fileId = client.check_for_existing_assistant_file_id(assistantId=assistantId, fileName=file, applicationName=applicationName)
+#             fileListIds.append(fileId)
+#         except:
+#             client.upload_file_to_assistant(fileName=file, applicationName=applicationName, assistantId=assistantId)
+#             fileId = client.check_for_existing_assistant_file_id(assistantId=assistantId, fileName=file, applicationName=applicationName)
+#             fileListIds.append(fileId)
 
-    try:
-        userThreadId = client.get_thread_id_for_user(assistantId=assistantId, applicationName=applicationName, userId=userId)
-    except:
-        client.create_assistant_thread(assistantId=assistantId, applicationName=applicationName, userId=userId)
-        userThreadId = client.get_thread_id_for_user(assistantId=assistantId, applicationName=applicationName, userId=userId)
-    else:
-        client.add_message_in_existing_thread(threadId=userThreadId, message=userPrompt, fileListToInclude=fileListIds)
-        client.run_thread_for_assistant_response(threadId=userThreadId, assistantId=assistantId, applicationName=applicationName, userId=userId)
-        client.get_latest_assistant_message_in_existing_thread(threadId=userThreadId)
+#     try:
+#         userThreadId = client.get_thread_id_for_user(assistantId=assistantId, applicationName=applicationName, userId=userId)
+#     except:
+#         client.create_assistant_thread(assistantId=assistantId, applicationName=applicationName, userId=userId)
+#         userThreadId = client.get_thread_id_for_user(assistantId=assistantId, applicationName=applicationName, userId=userId)
+#     else:
+#         client.add_message_in_existing_thread(threadId=userThreadId, message=userPrompt, fileListToInclude=fileListIds)
+#         client.run_thread_for_assistant_response(threadId=userThreadId, assistantId=assistantId, applicationName=applicationName, userId=userId)
+#         client.get_latest_assistant_message_in_existing_thread(threadId=userThreadId)

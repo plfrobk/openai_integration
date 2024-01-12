@@ -1,39 +1,41 @@
 from os import makedirs, path, listdir
-from datetime import datetime
-from json import dump, dumps, load
-from tiktoken import get_encoding
-from requests import post
-from base64 import b64encode
-import pypdfium2 as pdfium
+from json import dump, load
 from openai import OpenAI
 
 class OpenAIPythonIntegration(OpenAI):
     """Custom class to utilize Python to directly work with OpenAI to do various functions"""
-    def __init__(self):
+    def __init__(self, applicationName, virtualEnvironmentName):
+        self.applicationName = applicationName
+        self.virtualEnvironmentName = virtualEnvironmentName
+        
         self.apiKey = self.get_api_key()
         self.organizationId = self.get_organization_key()
     
         super().__init__(organization=self.organizationId, api_key=self.apiKey)
 
-    def get_api_key(self, fileName='./local/API_KEY.txt'): #Put API key in virtual environment folder, e.g. local
+    def get_api_key(self):
         """Function to get the API key to use for authorization when opening client object"""
         try:
+            fileName = f'./{self.virtualEnvironmentName}/API_KEY.txt'
+            
             with open(fileName, 'r', encoding='utf-8') as data:
                 key = data.read().strip()
             return key
         except FileNotFoundError as e:
             print(f"Error: API key file not found! Full message: ${e}")
         
-    def get_organization_key(self, fileName='./local/ORGANIZATION_KEY.txt'): #Put API key in virtual environment folder, e.g. local
+    def get_organization_key(self):
         """Function to get the Organization key to use with the API key when opening client object"""
         try:
+            fileName = f'./{self.virtualEnvironmentName}/ORGANIZATION_KEY.txt'
+            
             with open(fileName, 'r', encoding='utf-8') as data:
                 key = data.read().strip()
             return key
         except FileNotFoundError as e:
             print(f"Error: Organization key file not found! Full message: ${e}")
 
-    def create_assistant(self, name, instructions, applicationName, metadata = '', assistantType='retrieval', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
+    def create_assistant(self, name, instructions, metadata = '', assistantType='retrieval', gptModel='gpt-4-1106-preview', mode='w', messageIndent=0):
         """Function to directly use OpenAI to create an assistant"""
 
         assistantDict = {}
@@ -53,16 +55,16 @@ class OpenAIPythonIntegration(OpenAI):
         assistantDict['type'] = assistant.tools[0].type
         assistantDict['metadata'] = assistant.metadata
 
-        makedirs(path.dirname(f'./src/{applicationName}/config/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{self.applicationName}/config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/config/{assistant.id}_{assistant.name}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{self.applicationName}/config/{assistant.id}_{assistant.name}.json', mode, encoding='utf-8') as outputFile:
             dump(assistantDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
         print('Created assistant with id: ' + str(assistant.id))
 
-    def get_assistant_id(self, applicationName, assistantName):
+    def get_assistant_id(self, assistantName):
         """Function to review the previously generated assistant json file configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/config/')
+        configFiles = listdir(f'./src/{self.applicationName}/config/')
         assistantFiles = []
 
         for file in configFiles:
@@ -70,7 +72,7 @@ class OpenAIPythonIntegration(OpenAI):
                 assistantFiles.append(file)
         
         for file in assistantFiles:
-            with open(f'./src/{applicationName}/config/{file}', 'r') as data:
+            with open(f'./src/{self.applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 name = config['name']
             
@@ -83,11 +85,11 @@ class OpenAIPythonIntegration(OpenAI):
         except UnboundLocalError:
             raise Exception('Error: Assistant does not exist by name entered.  Please check the application and assistant name or call the create assistant function.')
     
-    def upload_file_to_assistant(self, fileName, applicationName, assistantId, filePurpose='assistants', fileReadMode = 'rb', fileWriteMode = 'w', messageIndent=0):
+    def upload_file_to_assistant(self, fileName, assistantId, filePurpose='assistants', fileReadMode = 'rb', fileWriteMode = 'w', messageIndent=0):
         """Function to directly upload a file to OpenAI"""
         fileUploadDict = {}
 
-        with open(f'./src/{applicationName}/data/{fileName}', mode=fileReadMode) as fileToUpload:
+        with open(f'./src/{self.applicationName}/data/{fileName}', mode=fileReadMode) as fileToUpload:
             try:
                 uploadResponse = self.files.create(
                     file=fileToUpload,
@@ -111,17 +113,17 @@ class OpenAIPythonIntegration(OpenAI):
                     fileUploadDict['created_at'] = fileToAssistantResponse.created_at
                     fileUploadDict['original_file_name'] = fileName
 
-                    makedirs(path.dirname(f'./src/{applicationName}/config/'), exist_ok=True)
+                    makedirs(path.dirname(f'./src/{self.applicationName}/config/'), exist_ok=True)
         
-                    with open(f'./src/{applicationName}/config/{fileToAssistantResponse.id}_{fileName}_{fileToAssistantResponse.assistant_id}.json', fileWriteMode, encoding='utf-8') as outputFile:
+                    with open(f'./src/{self.applicationName}/config/{fileToAssistantResponse.id}_{fileName}_{fileToAssistantResponse.assistant_id}.json', fileWriteMode, encoding='utf-8') as outputFile:
                         dump(fileUploadDict, outputFile, ensure_ascii=False, indent=messageIndent)
                 
                 except Exception as e:
                     print('Failure! Could not associated uploaded file to assistant, full error message: ' + str(e))
             
-    def check_for_existing_assistant_file_id(self, assistantId, fileName, applicationName):
+    def check_for_existing_assistant_file_id(self, assistantId, fileName):
         """Function to review the previously generated file upload json configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/config/')
+        configFiles = listdir(f'./src/{self.applicationName}/config/')
         assistantFiles = []
 
         for file in configFiles:
@@ -129,7 +131,7 @@ class OpenAIPythonIntegration(OpenAI):
                 assistantFiles.append(file)
 
         for file in assistantFiles:
-            with open(f'./src/{applicationName}/config/{file}', 'r') as data:
+            with open(f'./src/{self.applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 name = config['original_file_name']
             
@@ -139,7 +141,7 @@ class OpenAIPythonIntegration(OpenAI):
     
         return fileId
     
-    def create_assistant_thread(self, assistantId, applicationName, userId, mode='w', messageIndent=0):
+    def create_assistant_thread(self, assistantId, userId, mode='w', messageIndent=0):
         """Function to directly create a thread and associate with an assistant at OpenAI"""
         threadDict = {}
         threadResponse = self.beta.threads.create(
@@ -151,14 +153,14 @@ class OpenAIPythonIntegration(OpenAI):
         threadDict['assistant_id'] = threadResponse.metadata['assistantId']
         threadDict['user_id'] = int(threadResponse.metadata['userId'])
 
-        makedirs(path.dirname(f'./src/{applicationName}/config/'), exist_ok=True)
+        makedirs(path.dirname(f'./src/{self.applicationName}/config/'), exist_ok=True)
         
-        with open(f'./src/{applicationName}/config/{threadResponse.id}_{threadResponse.created_at}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
+        with open(f'./src/{self.applicationName}/config/{threadResponse.id}_{threadResponse.created_at}_{assistantId}.json', mode, encoding='utf-8') as outputFile:
             dump(threadDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
-    def get_thread_id_for_user(self, assistantId, applicationName, userId):
+    def get_thread_id_for_user(self, assistantId, userId):
         """Function to review the previously generated thread json file configurations to return the ID associated"""
-        configFiles = listdir(f'./src/{applicationName}/config/')
+        configFiles = listdir(f'./src/{self.applicationName}/config/')
         threadFiles = []
 
         for file in configFiles:
@@ -166,7 +168,7 @@ class OpenAIPythonIntegration(OpenAI):
                 threadFiles.append(file)
     
         for file in threadFiles:
-            with open(f'./src/{applicationName}/config/{file}', 'r') as data:
+            with open(f'./src/{self.applicationName}/config/{file}', 'r') as data:
                 config = load(data)
                 threadId = config['id']
                 userId = config['user_id']
@@ -180,7 +182,7 @@ class OpenAIPythonIntegration(OpenAI):
         except UnboundLocalError:
             raise Exception('Error: Thread does not exist for assistant and user ID.  Please check the assistant ID, application name, and user ID or call the create thread function.')
         
-    def add_message_in_existing_thread(self, threadId, message, fileListToInclude, applicationName, userId, mode='w', messageIndent=0):
+    def add_message_in_existing_thread(self, threadId, message, fileListToInclude, userId, mode='w', messageIndent=0):
         try:
             messageResponseDict = {}
 
@@ -200,16 +202,16 @@ class OpenAIPythonIntegration(OpenAI):
             messageResponseDict['response_type'] = messageResponse.content[0].type
             messageResponseDict['response_text'] = messageResponse.content[0].text.value
 
-            makedirs(path.dirname(f'./src/{applicationName}/data/chat_messages/'), exist_ok=True)
+            makedirs(path.dirname(f'./src/{self.applicationName}/data/chat_messages/'), exist_ok=True)
 
-            with open(f'./src/{applicationName}/data/chat_messages/{userId}_{messageResponse.role}_{messageResponse.id}_{messageResponse.created_at}_{messageResponse.run_id}.json', mode, encoding='utf-8') as outputFile:
+            with open(f'./src/{self.applicationName}/data/chat_messages/{userId}_{messageResponse.role}_{messageResponse.id}_{messageResponse.created_at}_{messageResponse.run_id}.json', mode, encoding='utf-8') as outputFile:
                 dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
 
             print('Success! Message added to thread, full response: ' + str(messageResponse))
         except Exception as e:
             print('Failure! Message not added to thread, fill response: ' + str(e))
 
-    def run_thread_for_assistant_response(self, threadId, assistantId, applicationName, userId, mode='w', messageIndent=0):
+    def run_thread_for_assistant_response(self, threadId, assistantId, userId, mode='w', messageIndent=0):
         try:
             createRunResponse = self.beta.threads.runs.create(
                 thread_id = threadId,
@@ -238,9 +240,9 @@ class OpenAIPythonIntegration(OpenAI):
                 runResponseDict['failed_at'] = runResponse.failed_at
                 runResponseDict['error_message'] = runResponse.last_error
 
-                makedirs(path.dirname(f'./src/{applicationName}/data/run_logs/'), exist_ok=True)
+                makedirs(path.dirname(f'./src/{self.applicationName}/data/run_logs/'), exist_ok=True)
         
-                with open(f'./src/{applicationName}/data/run_logs/{runResponse.id}_{runResponse.created_at}_{runResponse.thread_id}.json', mode, encoding='utf-8') as outputFile:
+                with open(f'./src/{self.applicationName}/data/run_logs/{runResponse.id}_{runResponse.created_at}_{runResponse.thread_id}.json', mode, encoding='utf-8') as outputFile:
                     dump(runResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
             
             except Exception as e:
@@ -252,10 +254,15 @@ class OpenAIPythonIntegration(OpenAI):
         #     run_id="run_abc123"
         # )
 
-    def get_latest_assistant_message_in_existing_thread(self, threadId, applicationName, userId, assistantRoleName = 'assistant', mode='w', messageIndent=0):
+    def get_latest_assistant_message_in_existing_thread(self, threadId, assistantId, userId, assistantRoleName = 'assistant', userRoleName='user', mode='w', messageIndent=0):
         try:
             threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
             latestMessage = threadMessageResponse.data[0]
+
+            if latestMessage.role == userRoleName:
+                self.run_thread_for_assistant_response(threadId, assistantId, userId)
+                threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
+                latestMessage = threadMessageResponse.data[0]
 
             if latestMessage.role == assistantRoleName:
                 for response in latestMessage.content:
@@ -270,16 +277,16 @@ class OpenAIPythonIntegration(OpenAI):
                     messageResponseDict['response_type'] = response.type
                     messageResponseDict['response_text'] = response.text.value
 
-                    makedirs(path.dirname(f'./src/{applicationName}/data/chat_messages/'), exist_ok=True)
+                    makedirs(path.dirname(f'./src/{self.applicationName}/data/chat_messages/'), exist_ok=True)
         
-                    with open(f'./src/{applicationName}/data/chat_messages/{userId}_{latestMessage.role}_{latestMessage.id}_{latestMessage.created_at}_{latestMessage.run_id}.json', mode, encoding='utf-8') as outputFile:
+                    with open(f'./src/{self.applicationName}/data/chat_messages/{userId}_{latestMessage.role}_{latestMessage.id}_{latestMessage.created_at}_{latestMessage.run_id}.json', mode, encoding='utf-8') as outputFile:
                         dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
             else:
                 print('Failure! Latest message is not an assistant response.  Please run the function to run the assistant thread and try again.')
         except Exception as e:
             print('Failure! Could not retrieve thread messages, full response: ' + str(e))
 
-    def get_all_messages_in_existing_thread(self, threadId, applicationName, userId, mode='w', messageIndent=0):
+    def get_all_messages_in_existing_thread(self, threadId, userId, mode='w', messageIndent=0):
         try:
             threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
             latestMessage = threadMessageResponse.data
@@ -297,9 +304,9 @@ class OpenAIPythonIntegration(OpenAI):
                     messageResponseDict['response_type'] = response.type
                     messageResponseDict['response_text'] = response.text.value
 
-                    makedirs(path.dirname(f'./src/{applicationName}/data/chat_messages/'), exist_ok=True)
+                    makedirs(path.dirname(f'./src/{self.applicationName}/data/chat_messages/'), exist_ok=True)
         
-                    with open(f'./src/{applicationName}/data/chat_messages/{userId}_{message.role}_{message.id}_{message.created_at}_{message.run_id}.json', mode, encoding='utf-8') as outputFile:
+                    with open(f'./src/{self.applicationName}/data/chat_messages/{userId}_{message.role}_{message.id}_{message.created_at}_{message.run_id}.json', mode, encoding='utf-8') as outputFile:
                         dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
             
             print('Success! All thread messages retrieved and saved')
