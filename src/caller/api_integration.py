@@ -46,8 +46,9 @@ class OpenAIAPIIntegration():
 
         return response.json()
 
-    def format_chat_response(self, gptResponse, systemPrompt, userPrompt, outputDict):
+    def format_chat_response(self, gptResponse, systemPrompt, userPrompt):
         """Function to take results from OpenAI and format them with appropriate data points"""
+        outputDict = {}
         systemAnswerRaw = gptResponse['choices'][0]['message']['content']
         systemAnswerFormatted = systemAnswerRaw.replace('\n', '').replace('{  ','{')
 

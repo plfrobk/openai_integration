@@ -1,6 +1,7 @@
 from os import makedirs, path, listdir
 from json import dump, load
 from openai import OpenAI
+from time import sleep
 
 class OpenAIPythonIntegration(OpenAI):
     """Custom class to utilize Python to directly work with OpenAI to do various functions"""
@@ -221,7 +222,7 @@ class OpenAIPythonIntegration(OpenAI):
         except Exception as e:
             print('Failure! Message not added to thread, full response: ' + str(e))
 
-    def run_thread_for_assistant_response(self, threadId, assistantId, userId, mode='w', messageIndent=0):
+    def run_thread_for_assistant_response(self, threadId, assistantId, userId, mode='w', messageIndent=0, runProcessingStatus='in_progress', maxRetries=5, retryWaitTimeSeconds=2):
         try:
             createRunResponse = self.beta.threads.runs.create(
                 thread_id = threadId,
@@ -232,47 +233,46 @@ class OpenAIPythonIntegration(OpenAI):
         else:
             try:
                 runResponseDict = {}
+                tryCount = 1
+                
+                while runProcessingStatus == 'in_progress' and tryCount <= maxRetries:
+                    runResponse = self.beta.threads.runs.retrieve(
+                        thread_id = threadId,
+                        run_id = createRunResponse.id
+                    )
 
-                runResponse = self.beta.threads.runs.retrieve(
-                thread_id = threadId,
-                run_id = createRunResponse.id
-                )
+                    runProcessingStatus = runResponse.status
+                    tryCount += 1
+                    sleep(retryWaitTimeSeconds)
 
-                runResponseDict['id'] = runResponse.id
-                runResponseDict['assistant_id'] = runResponse.assistant_id
-                runResponseDict['thread_id'] = runResponse.thread_id
-                runResponseDict['user_id'] = userId
-                runResponseDict['status'] = runResponse.status
-                runResponseDict['created_at'] = runResponse.created_at
-                runResponseDict['started_at'] = runResponse.started_at
-                runResponseDict['completed_at'] = runResponse.completed_at
-                runResponseDict['expires_at'] = runResponse.expires_at
-                runResponseDict['failed_at'] = runResponse.failed_at
-                runResponseDict['error_message'] = runResponse.last_error
+                if runProcessingStatus == 'in_progress':
+                    print('Failure! Run not completed within max retry limit.  Please try again later.')
+                else:
+                    runResponseDict['id'] = runResponse.id
+                    runResponseDict['assistant_id'] = runResponse.assistant_id
+                    runResponseDict['thread_id'] = runResponse.thread_id
+                    runResponseDict['user_id'] = userId
+                    runResponseDict['status'] = runResponse.status
+                    runResponseDict['created_at'] = runResponse.created_at
+                    runResponseDict['started_at'] = runResponse.started_at
+                    runResponseDict['completed_at'] = runResponse.completed_at
+                    runResponseDict['expires_at'] = runResponse.expires_at
+                    runResponseDict['failed_at'] = runResponse.failed_at
+                    runResponseDict['error_message'] = runResponse.last_error
 
-                makedirs(path.dirname(f'./src/{self.applicationName}/data/run_logs/'), exist_ok=True)
-        
-                with open(f'./src/{self.applicationName}/data/run_logs/{runResponse.id}_{runResponse.created_at}_{runResponse.thread_id}.json', mode, encoding='utf-8') as outputFile:
-                    dump(runResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
+                    makedirs(path.dirname(f'./src/{self.applicationName}/data/run_logs/'), exist_ok=True)
+            
+                    with open(f'./src/{self.applicationName}/data/run_logs/{runResponse.id}_{runResponse.created_at}_{runResponse.thread_id}.json', mode, encoding='utf-8') as outputFile:
+                        dump(runResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
             
             except Exception as e:
                 print('Failure! Could not retrieve run thread, full response: ' + str(e))
-    
-    #add new function or update one above to retrieve updated run status:
-        # run = self.beta.threads.runs.retrieve(
-        #     thread_id="thread_abc123",
-        #     run_id="run_abc123"
-        # )
 
-    def get_latest_assistant_message_in_existing_thread(self, threadId, assistantId, userId, assistantRoleName = 'assistant', userRoleName='user', mode='w', messageIndent=0):
+
+    def get_latest_assistant_message_in_existing_thread(self, threadId, userId, assistantRoleName = 'assistant', mode='w', messageIndent=0):
         try:
             threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
             latestMessage = threadMessageResponse.data[0]
-
-            if latestMessage.role == userRoleName:
-                self.run_thread_for_assistant_response(threadId, assistantId, userId)
-                threadMessageResponse = self.beta.threads.messages.list(thread_id = threadId)
-                latestMessage = threadMessageResponse.data[0]
 
             if latestMessage.role == assistantRoleName:
                 for response in latestMessage.content:
@@ -292,7 +292,7 @@ class OpenAIPythonIntegration(OpenAI):
                     with open(f'./src/{self.applicationName}/data/chat_messages/{userId}_{latestMessage.role}_{latestMessage.id}_{latestMessage.created_at}_{latestMessage.run_id}.json', mode, encoding='utf-8') as outputFile:
                         dump(messageResponseDict, outputFile, ensure_ascii=False, indent=messageIndent)
             else:
-                print('Failure! Latest message is not an assistant response.  Please run the function to run the assistant thread and try again.')
+                print('Failure! Latest message is not an assistant response.  Please re-run the function to run the assistant thread and try again.')
         except Exception as e:
             print('Failure! Could not retrieve thread messages, full response: ' + str(e))
 
