@@ -1,5 +1,7 @@
 # CUSTOM to Project
 src/*/data/*
+src/*/config/*
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
