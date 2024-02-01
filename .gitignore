@@ -2,6 +2,7 @@
 src/*/data/*
 src/*/config/*
 .vscode/
+reference
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
